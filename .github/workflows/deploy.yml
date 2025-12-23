@@ -1,0 +1,99 @@
+name: Deploy Admin Backend to AWS EC2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: build/libs/*.jar
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: ./build/libs
+
+      - name: Copy JAR to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "./build/libs/*.jar"
+          target: "/home/${{ secrets.EC2_USERNAME }}/food-review-admin-backend"
+          strip_components: 2
+
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DB_PASSWORD,JWT_SECRET,CORS_ORIGINS
+          command_timeout: 5m
+          script: |
+            cd /home/${{ secrets.EC2_USERNAME }}/food-review-admin-backend
+
+            echo "=== Stopping old process ==="
+            if [ -f app.pid ]; then
+              kill $(cat app.pid) 2>/dev/null || true
+              rm -f app.pid
+              sleep 3
+            fi
+
+            JAR_FILE=$(ls -t *SNAPSHOT.jar 2>/dev/null | grep -v plain | head -1)
+
+            echo "=== Starting application ==="
+            export DB_PASSWORD JWT_SECRET CORS_ORIGINS
+            nohup java -jar -Dserver.port=8081 "$JAR_FILE" > app.log 2>&1 &
+            echo $! > app.pid
+            disown
+
+            sleep 10
+
+            if [ -f app.pid ] && kill -0 $(cat app.pid) 2>/dev/null; then
+              echo "SUCCESS: Admin backend running on port 8081"
+            else
+              echo "FAILED"
+              tail -50 app.log
+              exit 1
+            fi

@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: food-review-admin-backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/food_review?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: root
+    password: ${DB_PASSWORD:8204}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+server:
+  port: ${SERVER_PORT:8081}
+
+# JWT Configuration (기존 백엔드와 동일한 secret 사용)
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-here-must-be-at-least-32-characters}
+
+# Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+# Logging
+logging:
+  level:
+    com.foodreview: DEBUG
+
+# CORS
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:3001}
