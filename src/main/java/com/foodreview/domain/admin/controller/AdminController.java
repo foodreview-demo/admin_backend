@@ -1,9 +1,11 @@
 package com.foodreview.domain.admin.controller;
 
 import com.foodreview.domain.admin.dto.AdminStatsResponse;
+import com.foodreview.domain.report.dto.ChatReportResponse;
 import com.foodreview.domain.report.dto.ReportProcessRequest;
 import com.foodreview.domain.report.dto.ReportResponse;
 import com.foodreview.domain.report.entity.ReportStatus;
+import com.foodreview.domain.report.service.ChatReportService;
 import com.foodreview.domain.report.service.ReportService;
 import com.foodreview.domain.restaurant.repository.RestaurantRepository;
 import com.foodreview.domain.review.repository.ReviewRepository;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminController {
 
     private final ReportService reportService;
+    private final ChatReportService chatReportService;
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
     private final RestaurantRepository restaurantRepository;
@@ -36,6 +39,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<AdminStatsResponse>> getStats() {
         AdminStatsResponse stats = AdminStatsResponse.builder()
                 .pendingReports(reportService.getPendingReportCount())
+                .pendingChatReports(chatReportService.getPendingChatReportCount())
                 .totalUsers(userRepository.count())
                 .totalReviews(reviewRepository.count())
                 .totalRestaurants(restaurantRepository.count())
@@ -64,5 +68,29 @@ public class AdminController {
             @Valid @RequestBody ReportProcessRequest request) {
         ReportResponse response = reportService.processReport(reportId, userDetails.getUser(), request);
         return ResponseEntity.ok(ApiResponse.success(response, "신고가 처리되었습니다"));
+    }
+
+    // 채팅 신고 관리 API
+    @GetMapping("/chat-reports")
+    public ResponseEntity<ApiResponse<PageResponse<ChatReportResponse>>> getChatReports(
+            @RequestParam(required = false) ReportStatus status,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<ChatReportResponse> response = chatReportService.getChatReports(status, pageable);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/chat-reports/{reportId}")
+    public ResponseEntity<ApiResponse<ChatReportResponse>> getChatReport(@PathVariable Long reportId) {
+        ChatReportResponse response = chatReportService.getChatReport(reportId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/chat-reports/{reportId}/process")
+    public ResponseEntity<ApiResponse<ChatReportResponse>> processChatReport(
+            @PathVariable Long reportId,
+            @CurrentUser CustomUserDetails userDetails,
+            @Valid @RequestBody ReportProcessRequest request) {
+        ChatReportResponse response = chatReportService.processChatReport(reportId, userDetails.getUser(), request);
+        return ResponseEntity.ok(ApiResponse.success(response, "채팅 신고가 처리되었습니다"));
     }
 }

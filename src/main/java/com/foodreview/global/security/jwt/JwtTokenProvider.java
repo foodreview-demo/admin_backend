@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 
 @Slf4j
 @Component
@@ -23,12 +24,28 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String secretString;
 
+    @Value("${jwt.expiration:86400000}")
+    private long tokenValidityInMilliseconds; // 기본값: 24시간
+
     private SecretKey secretKey;
     private final CustomUserDetailsService userDetailsService;
 
     @PostConstruct
     protected void init() {
         this.secretKey = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public String generateToken(String email, String role) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + tokenValidityInMilliseconds);
+
+        return Jwts.builder()
+                .subject(email)
+                .claim("role", role)
+                .issuedAt(now)
+                .expiration(validity)
+                .signWith(secretKey)
+                .compact();
     }
 
     public boolean validateToken(String token) {

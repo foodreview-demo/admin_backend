@@ -61,14 +61,19 @@ jobs:
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.0.3
         env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: DB_PASSWORD,JWT_SECRET,CORS_ORIGINS
+          envs: DB_HOST,DB_NAME,DB_USERNAME,DB_PASSWORD,JWT_SECRET,CORS_ORIGINS,ADMIN_EMAIL,ADMIN_PASSWORD
           command_timeout: 5m
           script: |
             cd /home/${{ secrets.EC2_USERNAME }}/food-review-admin-backend
@@ -83,8 +88,9 @@ jobs:
             JAR_FILE=$(ls -t *SNAPSHOT.jar 2>/dev/null | grep -v plain | head -1)
 
             echo "=== Starting application ==="
-            export DB_PASSWORD JWT_SECRET CORS_ORIGINS
-            nohup java -jar -Dserver.port=8081 "$JAR_FILE" > app.log 2>&1 &
+            export SPRING_PROFILES_ACTIVE=prod
+            export DB_HOST DB_NAME DB_USERNAME DB_PASSWORD JWT_SECRET CORS_ORIGINS ADMIN_EMAIL ADMIN_PASSWORD
+            nohup java -jar -Dspring.profiles.active=prod -Dserver.port=8081 "$JAR_FILE" > app.log 2>&1 &
             echo $! > app.pid
             disown
 

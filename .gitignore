@@ -1,7 +1,9 @@
 # Gradle
 .gradle/
 build/
+bin/
 !gradle/wrapper/gradle-wrapper.jar
+!**/gradle-wrapper.jar
 
 # IDE
 .idea/
@@ -9,14 +11,55 @@ build/
 *.ipr
 *.iws
 .vscode/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # Logs
 *.log
+logs/
 
-# Environment
+# Environment & Secrets
 .env
+.env.*
 *.local
+!.env.example
+
+# Local development config (sensitive data)
+src/main/resources/application-local.yml
+src/main/resources/application-dev.yml
+
+# Compiled files
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Package files
+*.war
+*.ear
+
+# Test output
+test-output/
+target/
+
+# Spring Boot
+*.pid
+
+# Eclipse
+.classpath
+.project
+.settings/
+.springBeans
+
+# NetBeans
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
