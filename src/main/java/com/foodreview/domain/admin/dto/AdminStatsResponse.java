@@ -11,4 +11,5 @@ public class AdminStatsResponse {
     private long totalRestaurants;
     private long pendingReports;
     private long pendingChatReports;
+    private long pendingReceiptReviews;
 }

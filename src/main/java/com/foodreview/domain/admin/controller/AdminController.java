@@ -9,6 +9,7 @@ import com.foodreview.domain.report.service.ChatReportService;
 import com.foodreview.domain.report.service.ReportService;
 import com.foodreview.domain.restaurant.repository.RestaurantRepository;
 import com.foodreview.domain.review.repository.ReviewRepository;
+import com.foodreview.domain.review.service.ReviewService;
 import com.foodreview.domain.user.repository.UserRepository;
 import com.foodreview.global.common.ApiResponse;
 import com.foodreview.global.common.PageResponse;
@@ -31,6 +32,7 @@ public class AdminController {
 
     private final ReportService reportService;
     private final ChatReportService chatReportService;
+    private final ReviewService reviewService;
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
     private final RestaurantRepository restaurantRepository;
@@ -40,6 +42,7 @@ public class AdminController {
         AdminStatsResponse stats = AdminStatsResponse.builder()
                 .pendingReports(reportService.getPendingReportCount())
                 .pendingChatReports(chatReportService.getPendingChatReportCount())
+                .pendingReceiptReviews(reviewService.getPendingReceiptCount())
                 .totalUsers(userRepository.count())
                 .totalReviews(reviewRepository.count())
                 .totalRestaurants(restaurantRepository.count())

@@ -77,6 +77,36 @@ public class Review extends BaseTimeEntity {
     @Builder.Default
     private Boolean isFirstReview = false;
 
-    @Column(name = "receipt_image", length = 500)
-    private String receiptImage;
+    @Column(name = "receipt_image_url", length = 500)
+    private String receiptImageUrl;
+
+    // 영수증 검증 상태
+    @Enumerated(EnumType.STRING)
+    @Column(name = "receipt_verification_status", length = 20)
+    @Builder.Default
+    private ReceiptVerificationStatus receiptVerificationStatus = ReceiptVerificationStatus.NONE;
+
+    // 영수증 검증 점수 (0 ~ 100)
+    @Column(name = "receipt_verification_score")
+    private Integer receiptVerificationScore;
+
+    // OCR 추출 텍스트 (검토용)
+    @Column(name = "receipt_ocr_text", length = 2000)
+    private String receiptOcrText;
+
+    // Admin 수동 승인
+    public void approveReceiptManually() {
+        this.receiptVerificationStatus = ReceiptVerificationStatus.MANUALLY_APPROVED;
+    }
+
+    // Admin 수동 거부
+    public void rejectReceiptManually() {
+        this.receiptVerificationStatus = ReceiptVerificationStatus.MANUALLY_REJECTED;
+    }
+
+    // 영수증이 인증된 상태인지 확인
+    public boolean isReceiptVerified() {
+        return this.receiptVerificationStatus == ReceiptVerificationStatus.VERIFIED
+                || this.receiptVerificationStatus == ReceiptVerificationStatus.MANUALLY_APPROVED;
+    }
 }
