@@ -1,13 +1,20 @@
 package com.foodreview.domain.admin.controller;
 
 import com.foodreview.domain.admin.dto.AdminStatsResponse;
+import com.foodreview.domain.gathering.dto.FailedRefundResponse;
+import com.foodreview.domain.gathering.dto.GatheringAdminResponse;
+import com.foodreview.domain.gathering.entity.GatheringStatus;
+import com.foodreview.domain.gathering.service.GatheringService;
 import com.foodreview.domain.report.dto.ChatReportResponse;
 import com.foodreview.domain.report.dto.ReportProcessRequest;
 import com.foodreview.domain.report.dto.ReportResponse;
 import com.foodreview.domain.report.entity.ReportStatus;
 import com.foodreview.domain.report.service.ChatReportService;
 import com.foodreview.domain.report.service.ReportService;
+import com.foodreview.domain.restaurant.dto.PendingRestaurantResponse;
+import com.foodreview.domain.restaurant.dto.RestaurantRejectRequest;
 import com.foodreview.domain.restaurant.repository.RestaurantRepository;
+import com.foodreview.domain.restaurant.service.RestaurantService;
 import com.foodreview.domain.review.repository.ReviewRepository;
 import com.foodreview.domain.review.service.ReviewService;
 import com.foodreview.domain.user.repository.UserRepository;
@@ -33,6 +40,8 @@ public class AdminController {
     private final ReportService reportService;
     private final ChatReportService chatReportService;
     private final ReviewService reviewService;
+    private final RestaurantService restaurantService;
+    private final GatheringService gatheringService;
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
     private final RestaurantRepository restaurantRepository;
@@ -43,6 +52,9 @@ public class AdminController {
                 .pendingReports(reportService.getPendingReportCount())
                 .pendingChatReports(chatReportService.getPendingChatReportCount())
                 .pendingReceiptReviews(reviewService.getPendingReceiptCount())
+                .pendingRestaurants(restaurantService.getPendingRestaurantCount())
+                .activeGatherings(gatheringService.getActiveGatheringCount())
+                .failedRefunds(gatheringService.getFailedRefundCount())
                 .totalUsers(userRepository.count())
                 .totalReviews(reviewRepository.count())
                 .totalRestaurants(restaurantRepository.count())
@@ -95,5 +107,56 @@ public class AdminController {
             @Valid @RequestBody ReportProcessRequest request) {
         ChatReportResponse response = chatReportService.processChatReport(reportId, userDetails.getUser(), request);
         return ResponseEntity.ok(ApiResponse.success(response, "채팅 신고가 처리되었습니다"));
+    }
+
+    // 음식점 승인 관리 API
+    @GetMapping("/restaurants/pending")
+    public ResponseEntity<ApiResponse<PageResponse<PendingRestaurantResponse>>> getPendingRestaurants(
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<PendingRestaurantResponse> response = restaurantService.getPendingRestaurants(pageable);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/restaurants/{restaurantId}")
+    public ResponseEntity<ApiResponse<PendingRestaurantResponse>> getRestaurant(@PathVariable Long restaurantId) {
+        PendingRestaurantResponse response = restaurantService.getRestaurant(restaurantId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/restaurants/{restaurantId}/approve")
+    public ResponseEntity<ApiResponse<PendingRestaurantResponse>> approveRestaurant(@PathVariable Long restaurantId) {
+        PendingRestaurantResponse response = restaurantService.approveRestaurant(restaurantId);
+        return ResponseEntity.ok(ApiResponse.success(response, "음식점이 승인되었습니다"));
+    }
+
+    @PostMapping("/restaurants/{restaurantId}/reject")
+    public ResponseEntity<ApiResponse<PendingRestaurantResponse>> rejectRestaurant(
+            @PathVariable Long restaurantId,
+            @Valid @RequestBody RestaurantRejectRequest request) {
+        PendingRestaurantResponse response = restaurantService.rejectRestaurant(restaurantId, request.getReason());
+        return ResponseEntity.ok(ApiResponse.success(response, "음식점이 거부되었습니다"));
+    }
+
+    // 번개모임 관리 API
+    @GetMapping("/gatherings")
+    public ResponseEntity<ApiResponse<PageResponse<GatheringAdminResponse>>> getGatherings(
+            @RequestParam(required = false) GatheringStatus status,
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<GatheringAdminResponse> response = gatheringService.getGatherings(status, pageable);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/gatherings/failed-refunds")
+    public ResponseEntity<ApiResponse<PageResponse<FailedRefundResponse>>> getFailedRefunds(
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponse<FailedRefundResponse> response = gatheringService.getFailedRefunds(pageable);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/gatherings/failed-refunds/{participantId}/complete")
+    public ResponseEntity<ApiResponse<FailedRefundResponse>> markRefundCompleted(
+            @PathVariable Long participantId) {
+        FailedRefundResponse response = gatheringService.markRefundCompleted(participantId);
+        return ResponseEntity.ok(ApiResponse.success(response, "환금 완료 처리되었습니다"));
     }
 }
